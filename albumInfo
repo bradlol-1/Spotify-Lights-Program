@@ -1,0 +1,43 @@
+                Console.WriteLine("Please Enter an Album");
+                var title = Console.ReadLine();
+                SearchRequest sea = new SearchRequest(SearchRequest.Types.Album, title);
+                var sear = await _spotify.Search.Item(sea);
+                int _length;
+                if (sear.Albums.Items.Count <= 10)
+                {
+                    _length = sear.Albums.Items.Count;
+                }
+                else
+                {
+                    _length = 10;
+                }
+
+                for (int i = 0; i < _length; i++)
+                {
+                    Console.WriteLine(i + 1 + ") " + sear.Albums.Items[i].Name + "  by: " + sear.Albums.Items[i].Artists[0].Name);
+
+                }
+                var t = await _spotify.Tracks.Get("3DK6m7It6Pw857FcQftMds");
+                Console.WriteLine("Which Album Is Yours? (Enter Number)");
+
+
+                int choice = Convert.ToInt32(Console.ReadLine());
+                Console.WriteLine(sear.Albums.Items[choice - 1].Id);
+                Console.Read();
+                var album = await _spotify.Albums.Get(sear.Albums.Items[choice - 1].Id);
+
+                //  Console.WriteLine(item.Albums.Total);
+
+                // Paging<TrackAudioFeatures> a = new TracksAudioFeaturesRequest(sear.Albums.Items[2].);
+                Paging<SimpleTrack> tracks = album.Tracks;
+                //var name = album.Tracks;
+                TrackAudioFeatures ss;
+
+                for (int i = 0; i <= album.Tracks.Total - 1; i++)
+                {
+                    var tra = await _spotify.Tracks.Get((album.Tracks.Items[i].Id));
+                    Console.WriteLine("  Popularity Level: " + tra.Popularity + "  Name: " + tra.Name);
+
+                    ss = await _spotify.Tracks.GetAudioFeatures(tra.Id);
+                    Console.WriteLine("     Tempo: " + ss.Tempo + "\n    Loudness: " + ss.Loudness + "\n      Energy: " + ss.Energy);
+                }
