@@ -1,0 +1,245 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using SpotifyAPI.Web;
+using SpotifyAPI.Web.Auth;
+using System.Timers;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.IO.Ports;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using static SpotifyAPI.Web.Scopes;
+
+
+namespace SpotifyAPI
+{
+    public class spot
+    {
+
+        public spot(SpotifyClient _spotify)
+        {
+            SpotifyClient spotify = _spotify;
+        }
+    }
+    public class Program
+    {
+        private static SerialPort port = new SerialPort("COM3", 9600);
+
+        private static readonly string clientId = "//";
+        private static readonly string clientSecret = "//";
+        private static SpotifyClient _spotify;
+        private static readonly EmbedIOAuthServer _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
+
+        public static async Task Main()
+        {
+
+            Timer time = new Timer();
+            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+            {
+                throw new NullReferenceException(
+                  "Please set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET via environment variables before starting the program"
+                );
+            }
+
+            await _server.Start();
+
+            _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
+
+
+            var request = new LoginRequest(_server.BaseUri, clientId, LoginRequest.ResponseType.Code)
+            {
+                Scope = new List<string> { UserReadEmail, AppRemoteControl, UserReadPlaybackState, UserModifyPlaybackState }
+            };
+            Uri uri = request.ToUri();
+
+            BrowserUtil.Open(uri);
+            int first = 1;
+            while (true)
+            {
+                if(port.IsOpen)
+                {
+                    port.Close();
+                }
+                Console.ReadLine();
+                port.DataBits = 8;
+                port.StopBits = StopBits.One;
+                port.Handshake = Handshake.None;
+                port.Parity = Parity.None;
+                port.Open();
+
+                Console.WriteLine("Enter Input: 1==getAlbum, 2==playSong");
+                var input = 2;// Convert.ToInt32(Console.ReadLine());
+                Console.ReadLine();
+                if (input == 1)
+                {
+                    Console.WriteLine("Please Enter an Album");
+                    var title = Console.ReadLine();
+                    SearchRequest sea = new SearchRequest(SearchRequest.Types.Album, title);
+                    var sear = await _spotify.Search.Item(sea);
+                    int _length;
+                    if (sear.Albums.Items.Count <= 10)
+                    {
+                        _length = sear.Albums.Items.Count;
+                    }
+                    else
+                    {
+                        _length = 10;
+                    }
+
+                    for (int i = 0; i < _length; i++)
+                    {
+                        Console.WriteLine(i + 1 + ") " + sear.Albums.Items[i].Name + "  by: " + sear.Albums.Items[i].Artists[0].Name);
+
+                    }
+                    var t = await _spotify.Tracks.Get("3DK6m7It6Pw857FcQftMds");
+                    Console.WriteLine("Which Album Is Yours? (Enter Number)");
+
+
+                    int choice = Convert.ToInt32(Console.ReadLine());
+                    Console.WriteLine(sear.Albums.Items[choice - 1].Id);
+                    Console.Read();
+                    var album = await _spotify.Albums.Get(sear.Albums.Items[choice - 1].Id);
+
+                    //  Console.WriteLine(item.Albums.Total);
+
+                    // Paging<TrackAudioFeatures> a = new TracksAudioFeaturesRequest(sear.Albums.Items[2].);
+                    Paging<SimpleTrack> tracks = album.Tracks;
+                    //var name = album.Tracks;
+                    TrackAudioFeatures ss;
+
+                    for (int i = 0; i <= album.Tracks.Total - 1; i++)
+                    {
+                        var tra = await _spotify.Tracks.Get((album.Tracks.Items[i].Id));
+                        Console.WriteLine("  Popularity Level: " + tra.Popularity + "  Name: " + tra.Name);
+
+                        ss = await _spotify.Tracks.GetAudioFeatures(tra.Id);
+                        Console.WriteLine("     Tempo: " + ss.Tempo + "\n    Loudness: " + ss.Loudness + "\n      Energy: " + ss.Energy);
+                    }
+
+
+                }
+                else if(input == 2)
+                {
+                    DeviceResponse devices = await _spotify.Player.GetAvailableDevices();
+                    int _length;
+                    var t = await _spotify.Tracks.Get("2gZUPNdnz5Y45eiGxpHGSc");
+                  
+                        //Find Users Possible Songs
+                        Console.WriteLine("Please Enter The Song Name You'd Like To Play");
+                        var title = Console.ReadLine();
+                        SearchRequest tracksearch = new SearchRequest(SearchRequest.Types.Track, title);
+                        SearchResponse searched_track = await _spotify.Search.Item(tracksearch);
+
+                        //List Songs
+                        if (searched_track.Tracks.Items.Count <= 10)
+                        {
+                            _length = searched_track.Tracks.Items.Count;
+                        }
+                        else
+                        {
+                            _length = 10;
+                        }
+
+                        for (int i = 0; i < _length; i++)
+                        {
+                            Console.WriteLine(i + 1 + ") " + searched_track.Tracks.Items[i].Name + "  by: " + searched_track.Tracks.Items[i].Artists[0].Name);
+
+                        }
+                        Console.WriteLine("Which Track Is Yours? (Enter Number)");
+
+
+                        int choice = Convert.ToInt32(Console.ReadLine());
+                    
+                    
+                  //  Console.WriteLine(searched_track.Tracks.Items[choice - 1].Id);
+                    Console.Read();
+                    var selectedTrack = await _spotify.Tracks.Get(searched_track.Tracks.Items[choice - 1].Id);
+
+
+                    var dev = new PlayerCurrentPlaybackRequest(PlayerCurrentPlaybackRequest.AdditionalTypes.Track);
+                    //  CurrentlyPlayingContext tt = await _spotify.Player.GetCurrentPlayback(dev);
+
+                    var current = new PlayerCurrentlyPlayingRequest(PlayerCurrentlyPlayingRequest.AdditionalTypes.Track);
+                    var currentlyplaying = await _spotify.Player.GetCurrentlyPlaying(current);
+                    IPlayableItem s = currentlyplaying.Item;
+                    TrackAudioFeatures trackfeat = null;
+                    if (s is FullTrack track1)
+                    {
+                        Console.WriteLine(track1.Name);
+
+                        trackfeat = await _spotify.Tracks.GetAudioFeatures(selectedTrack.Id);
+
+                    }
+
+                    var addtrack = new PlayerAddToQueueRequest(selectedTrack.Uri);
+                    var track = await _spotify.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest { Market = "from_token" });
+                    if (devices.Devices[0].IsActive == true)
+                    {
+                        await _spotify.Player.AddToQueue(addtrack);
+                        var nexttrack = new PlayerSkipNextRequest();
+                        await _spotify.Player.SkipNext(nexttrack);
+                        Console.WriteLine((Math.Round(trackfeat.Tempo)));
+
+                        Console.WriteLine((Math.Round(trackfeat.Tempo)));
+                        time.Interval = (60000 / (Math.Round(trackfeat.Tempo) )); //60,000/BPM∗T
+                        time.AutoReset = true;
+                        time.Enabled = true;
+                        
+                        if( first == 1)
+                        {
+                            time.Elapsed += ontimedEvent;
+                        }
+
+
+
+                            Console.WriteLine("Press Enter When Song is Over");
+                        Console.ReadLine();
+
+                        Console.ReadLine();
+                        port.Close();
+                        first = 2;
+                        time.Stop();
+                        // Console.WriteLine(track.Item);
+                        // await _spotify.Player.AddToQueue(addtrack);
+                        //  var nexttrack = new PlayerSkipNextRequest();
+                        //await _spotify.Player.SkipNext(nexttrack);
+
+     
+                    }
+
+                }
+            }
+
+        }
+        private static void ontimedEvent(Object source, ElapsedEventArgs e)
+        {
+            port.Write("a");
+
+        }
+        public static async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
+        {
+            await _server.Stop();
+
+            AuthorizationCodeTokenResponse token = await new OAuthClient().RequestToken(
+              new AuthorizationCodeTokenRequest(clientId, clientSecret, response.Code, _server.BaseUri)
+            );
+
+            var config = SpotifyClientConfig.CreateDefault().WithToken(token.AccessToken, token.TokenType);
+            _spotify = new SpotifyClient(config);
+
+
+
+            Console.Clear();
+
+
+
+
+
+
+        }
+    }
+}
+
