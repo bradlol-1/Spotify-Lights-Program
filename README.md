@@ -1,1 +1,2 @@
 # Spotify-Lights-Program
+In late 2022 I began to look into using API's to make computer software with, after playing around with a few public google API's I found the Spotify API. This allowed me to control my spotify account remotlely. When doing this I was also playing around with my Arduino microcontroller device. With the knowlege I learned both of these I made a program where you can change the color of the lights in your room automatically when a certain song plays
