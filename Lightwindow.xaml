@@ -23,5 +23,5 @@
         <Label x:Name="Info" Content="Please Play A Song" HorizontalAlignment="Left" Margin="362,257,0,0" VerticalAlignment="Top"/>
         <Label x:Name="presetinfo" Content="" HorizontalAlignment="Left" Height="66" Margin="300,297,0,0" VerticalAlignment="Top" Width="268"/>
 
-    </Grid>
+    </Grid> 
 </Window>
